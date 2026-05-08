@@ -1,6 +1,8 @@
 # 🧮 Square Root Pipeline
 
+![CI Status](https://github.com/robson-lachat/square-root/actions/workflows/ci.yml/badge.svg)
 ![Python Version](https://img.shields.io/badge/python-3.14+-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Build Status](https://img.shields.io/badge/tests-passing-brightgreen.svg)
 ![Linter](https://img.shields.io/badge/linter-ruff-orange.svg)
 ![OS](https://img.shields.io/badge/OS-WSL2--Ubuntu-linux.svg)
