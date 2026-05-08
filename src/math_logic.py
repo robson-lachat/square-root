@@ -12,7 +12,7 @@ def calculate_roots(limit: int):
     return roots
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     limit = 10
     print(f"Calculating square roots from 1 to {limit}:")
     print(calculate_roots(limit))
