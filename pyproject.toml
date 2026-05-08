@@ -1,0 +1,25 @@
+[project]
+name = "student-data-pipeline"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "robson-lachat", email = "robson.neves@gmail.com"}
+]
+requires-python = ">=3.12" # Aumentei a compatibilidade, mas pode manter 3.14 se preferir
+dependencies = []
+
+[tool.poetry]
+package-mode = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.0.3,<10.0.0)",
+    "ruff (>=0.15.12,<0.16.0)"
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

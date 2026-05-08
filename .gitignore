@@ -1,0 +1,14 @@
+# Python (temporary and compiled files)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Poetry (virtual environment and local settings)
+.venv/
+.pytest_cache/
+.ruff_cache/
+.env
+.env.*
+
+# System
+.DS_Store
