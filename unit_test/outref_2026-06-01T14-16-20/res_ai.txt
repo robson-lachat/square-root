@@ -1,0 +1,1 @@
+A regression test verifies that recent code changes haven't introduced new defects into existing, previously working functionality.

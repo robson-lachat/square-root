@@ -1,0 +1,46 @@
+
+DATE = $(shell date +%Y-%m-%dT%H-%M-%S)
+OUTREF_DATE = outref_${DATE}
+
+
+
+.PHONY: install test lint format check
+
+# Default target when you run 'make' without arguments
+help:
+	@echo "Available commands:"
+	@echo "  make install  - Installs dependencies via Poetry"
+	@echo "  make test     - Runs pytest with coverage for src"
+	@echo "  make lint     - Runs Ruff to check style and errors"
+	@echo "  make format   - Automatically formats code with Ruff"
+	@echo "  make check    - Runs format, lint, and test in sequence"
+
+install:
+	poetry install
+
+test:
+	poetry run pytest --cov=src --cov-report=term-missing
+
+lint:
+	poetry run ruff check .
+
+format:
+	poetry run ruff format .
+
+check: format lint test
+
+out:
+	/home/raguiar-lachat/square-root/.venv/bin/python /home/raguiar-lachat/square-root/src/math_logic.py > unit_test/out/res01
+
+diff:
+	../dircmp.pl unit_test/out unit_test/outref/; diff -rb unit_test/out unit_test/outref
+
+outref: dummy                              # MG: shameful hack, sorry
+	@echo ${DATE}
+	@echo ${OUTREF_DATE}
+	@cp -pr unit_test/out            unit_test/${OUTREF_DATE}
+	@rm -f  unit_test/outref
+	@ln -sf ${OUTREF_DATE} unit_test/outref
+
+dummy:
+	@echo echoOfDummyString

@@ -37,13 +37,25 @@ This project is optimized for **Linux/WSL2** environments.
 
 To streamline development and code reviews, a `Makefile` is provided with the following targets:
 
-| Command | Description |
-| :--- | :--- |
-| `make install` | Installs dependencies via Poetry. |
-| `make test` | Runs the unit test suite. |
-| `make lint` | Checks for logic and style errors using Ruff. |
-| `make format` | Automatically fixes code formatting (PEP 8). |
-| `make check` | **The definitive command:** Runs format, lint, and test in sequence. |
+| Command        | Description                                                          |
+| :------------- | :------------------------------------------------------------------- |
+| `make install` | Installs dependencies via Poetry.                                    |
+| `make test`    | Runs the unit test suite.                                            |
+| `make lint`    | Checks for logic and style errors using Ruff.                        |
+| `make format`  | Automatically fixes code formatting (PEP 8).                         |
+| `make check`   | **The definitive command:** Runs format, lint, and test in sequence. |
+
+# 1. Run the AI to get the current output
+make out-ai GEMINI_API_KEY="YOUR_KEY"
+
+# 2. Freeze this version as the official baseline
+make outref-ai
+
+# 3. Run the AI again to get a second slightly varied response
+make out-ai GEMINI_API_KEY="YOUR_KEY"
+
+# 4. Run the validation
+make diff-ai
 
 ## 🧪 Testing Strategy
 The project follows a **Fail-Fast** philosophy. The tests cover:

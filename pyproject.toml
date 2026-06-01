@@ -6,7 +6,7 @@ authors = [
     {name = "robson-lachat", email = "robson.neves@gmail.com"}
 ]
 requires-python = ">=3.12" # Aumentei a compatibilidade, mas pode manter 3.14 se preferir
-dependencies = []
+dependencies = ["google-genai (>=2.7.0,<3.0.0)"]
 
 [tool.poetry]
 package-mode = false

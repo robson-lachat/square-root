@@ -1,0 +1,88 @@
+# Automatically load environment variables from .env file
+-include .env
+export $(shell sed 's/=.*//' .env)
+
+DATE = $(shell date +%Y-%m-%dT%H-%M-%S)
+OUTREF_DATE = outref_${DATE}
+
+.PHONY: install test lint format check out diff outref dummy out-ai outref-ai diff-ai
+
+# Default target when you run just 'make'
+help:
+	@echo "Available commands:"
+	@echo "  make install   - Installs dependencies via Poetry"
+	@echo "  make test      - Runs pytest with coverage for src"
+	@echo "  make lint      - Runs Ruff to check style and errors"
+	@echo "  make format    - Automatically formats code with Ruff"
+	@echo "  make check     - Runs format, lint, and test in sequence"
+	@echo "  --- Traditional Black-Box Rules (MG) ---"
+	@echo "  make out       - Runs math_logic.py and saves output"
+	@echo "  make diff      - Compares current math output with baseline"
+	@echo "  make outref    - Updates the stable math baseline link"
+	@echo "  --- Advanced AI Rules (Robson) ---"
+	@echo "  make out-ai    - Runs AI application and saves output"
+	@echo "  make outref-ai - Updates the stable AI baseline link"
+	@echo "  make diff-ai   - Runs fuzzy semantic matching validation"
+
+install:
+	poetry install
+
+test:
+	poetry run pytest --cov=src --cov-report=term-missing
+
+lint:
+	poetry run ruff check .
+
+format:
+	poetry run ruff format .
+
+check: format lint test
+
+# --- ORIGINAL BLACK-BOX LOGIC (MG) ---
+out:
+	/home/raguiar-lachat/square-root/.venv/bin/python /home/raguiar-lachat/square-root/src/math_logic.py > unit_test/out/res01
+
+diff:
+	../dircmp.pl unit_test/out unit_test/outref/; diff -rb unit_test/out unit_test/outref
+
+outref: dummy
+	@echo ${DATE}
+	@echo ${OUTREF_DATE}
+	@cp -pr unit_test/out            unit_test/${OUTREF_DATE}
+	@rm -f  unit_test/outref
+	@ln -sf ${OUTREF_DATE} unit_test/outref
+
+dummy:
+	@echo echoOfDummyString
+
+# --- NEW AI INTEGRATION LOGIC (ROBSON) ---
+out-ai:
+	@mkdir -p unit_test/out
+	@echo "Running AI application..."
+	@poetry run python src/ai_app.py > unit_test/out/res_ai.txt
+
+outref-ai: dummy
+	@mkdir -p unit_test/${OUTREF_DATE}
+	@cp -p unit_test/out/res_ai.txt unit_test/${OUTREF_DATE}/res_ai.txt
+	@rm -f unit_test/outref_ai
+	@ln -sf ${OUTREF_DATE} unit_test/outref_ai
+
+diff-ai:
+	@poetry run python src/validate_ai_output.py unit_test/out/res_ai.txt unit_test/outref_ai/res_ai.txt
+
+
+out-math:
+	@mkdir -p unit_test/out
+	@echo "Running Math Analysis application..."
+	@poetry run python src/math_analysis.py > unit_test/out/res_math.txt
+
+
+outref-math: dummy
+	@mkdir -p unit_test/${OUTREF_DATE}
+	@cp -p unit_test/out/res_math.txt unit_test/${OUTREF_DATE}/res_math.txt
+	@rm -f unit_test/outref_math
+	@ln -sf ${OUTREF_DATE} unit_test/outref_math
+
+
+diff-math:
+	@poetry run python src/validate_ai_output.py unit_test/out/res_math.txt unit_test/outref_math/res_math.txt

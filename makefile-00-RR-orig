@@ -1,0 +1,24 @@
+.PHONY: install test lint format check
+
+# Default target when you run 'make' without arguments
+help:
+	@echo "Available commands:"
+	@echo "  make install  - Installs dependencies via Poetry"
+	@echo "  make test     - Runs pytest with coverage for src"
+	@echo "  make lint     - Runs Ruff to check style and errors"
+	@echo "  make format   - Automatically formats code with Ruff"
+	@echo "  make check    - Runs format, lint, and test in sequence"
+
+install:
+	poetry install
+
+test:
+	poetry run pytest --cov=src --cov-report=term-missing
+
+lint:
+	poetry run ruff check .
+
+format:
+	poetry run ruff format .
+
+check: format lint test
