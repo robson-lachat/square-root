@@ -1,0 +1,379 @@
+#! /bin/sh
+eval '  exec perl -x $0 ${1+"$@"} '
+#! perl
+# -----------------------------------------------------------------------------
+# Name:      dircmp.pl
+# Purpose:   Please see the printUsage function for info.
+#
+# Date:      08 Apr 2002
+# Author:    Mark Gaber
+#
+# Invoke:    dircmp.pl dir_1 dir_2
+#
+#
+# Revisions: 
+# 
+# 2015-03-17 MG 0.02
+# - Porting to L4T environment
+# - Simplified name to simply dircmp.pl
+# 
+# 2015-03-17 MG 0.01
+# - Copy coming from isdc_dircmp_dircmp.pl version 1.6.2
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Initializations
+# -----------------------------------------------------------------------------
+  $FUNCNAME = "dircmp.pl";
+
+  $testPrintFuncname = 0;
+# $testPrintFuncname = 1;   # 1 = print of function name
+
+  if ($testPrintFuncname == 1) {print "Entering $FUNCNAME\n"; }
+
+  $FILE = "file";
+  $DIR  = "dir ";
+
+  $SAME = "same     ";
+  $DIFF = "different";
+  $UNIQ = "unique   ";
+  $COMM = "common   ";
+
+# -----------------------------------------------------------------------------
+# Input argument validations
+# -----------------------------------------------------------------------------
+
+  $PAGER      = $ENV{'PAGER'};
+# $ISDC_ENV   = $ENV{'ISDC_ENV'};
+# $SCRIPT_LOC = $ISDC_ENV."/support-sw/tools/isdc_dircmp/".$FUNCNAME;
+# $SCRIPT_LOC = "/home/mgaber/local/bin/".$FUNCNAME;
+
+  $DIRCMP_INSTALL_DIR = $ENV{'DIRCMP_INSTALL_DIR'};
+  $SCRIPT_LOC         = $DIRCMP_INSTALL_DIR."/".$FUNCNAME;
+# print "$FUNCNAME info: DIRCMP_INSTALL_DIR $DIRCMP_INSTALL_DIR\n";
+# print "$FUNCNAME info: PAGER              $PAGER\n";
+# print "$FUNCNAME info: SCRIPT_LOC         $SCRIPT_LOC\n";
+
+  if (($ARGV[0] eq "-h"   ) ||
+      ($ARGV[0] eq "--h"  ) ||
+      ($ARGV[0] eq "-help")) { 
+    system("pod2man $SCRIPT_LOC | nroff -man| $PAGER");
+    exit 0;
+  }
+  elsif (($#ARGV < 1) || 
+         ($#ARGV > 3)) { 
+    system("pod2man $SCRIPT_LOC | nroff -man| $PAGER");
+    exit 2;
+  }
+
+  $d1 = $ARGV[0];
+  $d2 = $ARGV[1];
+
+  if (! -d $d1 || (! -d $d2)) {
+    if (! -d $d1) {
+      print "$FUNCNAME ERROR: dir \"$d1\" does not exist.\n";
+    }
+    if (! -d $d2) {
+      print "$FUNCNAME ERROR: dir \"$d2\" does not exist.\n";
+    }
+    exit 2;
+  }
+
+# -----------------------------------------------------------------------------
+# Build a table that is the union of the two directories' contents:
+# 
+# typeDUCS  typeDF     nameStr               dirIfUniq    name            count
+# --------- ------  -----------------------  ---------  ---------------   -----
+# common     dir          dir_tmp               X       dir_tmp             2
+# same       file         common_log.txt        X	common_log.txt      2
+# unique     dir    dir_1/unique_dir          dir_1     unique_dir          1
+# unique     file   dir_1/unique_to_dir_1     dir_2     unique_to_dir_1     1
+# different  file         different_date.fits   X	different_date.fits 2
+#
+# |<-------- Used in the output ----------->|<------ working variables ------>|
+#
+# Table "union" will be built in several steps.
+# -----------------------------------------------------------------------------
+  $exitStatus = 0;
+
+# Get itemFindListD1 and D2
+  @itemFindListD1 = `cd $d1; find . -follow`;
+  @itemFindListD2 = `cd $d2; find . -follow`;
+
+# Step 1: Populate name, dirIfUniq and initialize count.
+  foreach $item (@itemFindListD1) {
+    chomp $item;
+    $itemInfo = {
+      name      => $item,
+      dirIfUniq => $d1,
+      count     => 0,
+    };
+    $union{$item}= $itemInfo;
+  }
+
+  foreach $item (@itemFindListD2) {
+    chomp $item;
+    $itemInfo = {
+      name      => $item,
+      dirIfUniq => $d2,
+      count     => 0,
+    };
+    $union{$item}= $itemInfo;
+  }
+
+# Step 2: count is calculated
+  foreach $item (@itemFindListD1, @itemFindListD2) {
+    $union{$item}->{name} =~s/^\.\///g;  # strip leading ./ in name
+    $union{$item}->{count}++;            # count occurences to get uniq/common
+    $union{$item}->{typeDF}=&getItemTypeDF("$union{$item}->{dirIfUniq}/$item");
+  }
+
+# Step 3: figure out the two types (DUCS and DF) and nameStr.
+  foreach $item (keys %union) {
+
+    if ($union{$item}->{count} == 1) {
+      $union{$item}->{typeDUCS} = $UNIQ;
+      $union{$item}->{nameStr}  = $union{$item}->{dirIfUniq}."/"
+                                . $union{$item}->{name};
+      $exitStatus = 1;
+    }  # endif 1_unique
+
+    elsif ($union{$item}->{count} == 2) {
+      $union{$item}->{nameStr}  = $union{$item}->{name};
+      if ($union{$item}->{typeDF} eq $DIR) {
+        $union{$item}->{typeDUCS} = $COMM;
+      }
+      else {  # it is a file
+
+        $f1 = $d1."/".$union{$item}->{name};
+        $f2 = $d2."/".$union{$item}->{name};
+        $sizeF1 = -s $f1;
+        $sizeF2 = -s $f2;
+        if ($sizeF1 != $sizeF2) {  # must be different since size is different
+          $union{$item}->{typeDUCS} = $DIFF;
+          $exitStatus = 1;
+        }
+        else {  # must do cmp since size does not confirm anything
+          $res = `cmp $f1 $f2 2> /dev/null`;
+          $status=$?/256;
+          if ($status == 0) {
+            $union{$item}->{typeDUCS} = $SAME;
+          }
+          elsif ($status == 1) {
+            $union{$item}->{typeDUCS} = $DIFF;
+            $exitStatus = 1;
+#           print "\ncmp diff  detected:\n $f1 \n $f2    $status\n";
+          }
+          else {
+            if ((! -e $f1) && (! -e $f2)) {
+              $union{$item}->{typeDUCS} = $SAME;
+            }
+            else {
+              print "********************* WARNING ************************\n";
+              print "Unexpected cmp error encountered with files\n";
+              print "<$f1>\n";
+              print "<$f2>\n";
+              print "Exiting $FUNCNAME\n";
+              print "********************* WARNING ************************\n";
+              exit 3;
+            }
+          }  # endif same/diff
+
+
+        }    # endif dir/file
+      }      # endif size different
+    }        # endif 2_common
+
+    else {
+      print "********************* WARNING ************************\n";
+      printf "Unexpected number of occurences found (%d instead of 1 or 2)\n",
+             $union{$item}->{count};
+      print "Exiting $FUNCNAME\n";
+      print "********************* WARNING ************************\n";
+      exit 3;
+    }  # endif 1_uniq/2_common/unexpected
+  }    # next item in d1 d2 lists
+
+# Sort the result
+
+
+# -----------------------------------------------------------------------------
+# Print output to screen
+# -----------------------------------------------------------------------------
+  @sortedItems = sort {$union{$a}->{typeDUCS} cmp $union{$b}->{typeDUCS}}  
+                 (keys %union);
+
+# Perhaps not the best way of sorting the order of appearance ...
+  @sortedItems = sort {$union{$a}->{typeDUCS}.
+                       $union{$a}->{typeDF}  .
+                       $union{$a}->{nameStr}     cmp
+                       $union{$b}->{typeDUCS}.
+                       $union{$b}->{typeDF}  .
+                       $union{$b}->{nameStr}  } (keys %union);
+
+  foreach $item (@sortedItems) {
+    printf "%s  %s  %s\n", 
+           $union{$item}->{typeDUCS},
+           $union{$item}->{typeDF}, 
+           $union{$item}->{nameStr};
+  }
+
+  if ($testPrintFuncname == 1) {print "Exiting  $FUNCNAME\n"; }
+  exit $exitStatus;
+
+# -----------------------------------------------------------------------------
+# FUNCTION DEFINITION
+# -----------------------------------------------------------------------------
+sub getItemTypeDF () {
+
+  local $item = @_[0];
+  local $itemTypeDF;
+
+#  chomp $item;
+
+  if (-f $item) { 
+    $itemTypeDF = $FILE;
+  }
+  elsif (-d $item) { 
+    $itemTypeDF = $DIR;
+  }
+  elsif (-l $item) { # We enter this case when the link is to an absent file!
+    $itemTypeDF = $FILE;
+  }
+  else {
+    print "********************* WARNING ************************\n";
+    print "Unexpected item encountered (expecting file or dir):<$item>\n";
+    print "Exiting $FUNCNAME\n";
+    print "********************* WARNING ************************\n";
+    exit 3;
+  }
+  return $itemTypeDF;
+}
+
+# -----------------------------------------------------------------------------
+# FUNCTION DEFINITION
+# -----------------------------------------------------------------------------
+sub printUsage () {  # to be removed if man page after __END__ works at isdc.
+  print "\n";
+  print "Usage:  $FUNCNAME d1 d2\n";
+  print "\n";
+  print "Will compare all items in subtrees d1 and d2, and will identify\n"
+       ."what items are the same, different or unique.  The output \n"
+       ."resembles:\n"
+       ."\n"
+       ."  common     dir   dir_present_in_both       \n"
+       ."  same       file  file_same_in_both         \n"
+       ."  unique     dir   d1/dir_present_in_d1_only \n"
+       ."  unique     file  file_present_in_d1_only   \n"
+       ."  different  file  file_different            \n";
+  print "\n";
+  print "\n";
+  print "  --help  Print this info\n";
+  print "  --h     \n";
+  print "  -h      \n";
+  print "\n";
+  print "  Exit status:\n"
+       ."  ------------\n"
+       ."  0 no diff (or successful completion of -h)\n"
+       ."  1 differences found\n"
+       ."  2 user error (eg. dir does not exist)\n"
+       ."  3 coding anomaly detected.\n";
+
+}
+# last line
+__END__
+
+=cut
+
+=head1 NAME
+
+dircmp.pl  -  directory comparison
+
+=head1 SYNOPSIS
+
+dircmp  d1  d2
+
+=head1 DESCRIPTION
+
+Will compare all items in subtrees d1 and d2, and will identify
+what items are the same, different or unique.  The output
+resembles:
+
+  common     dir   dir_present_in_both
+  same       file  file_same_in_both
+  unique     dir   d1/dir_present_in_d1_only
+  unique     file  file_present_in_d1_only
+  different  file  file_different
+
+
+
+=head2 Limitations:
+
+ 1. There is no cleanup made for user in paths such as:
+      .///./dir_1///.///.
+
+=head2 Differences with Solaris "dircmp" (/usr/bin/dircmp):
+
+ 1. If the two subtrees contain links to an absent file (eg. a broken link
+    that points to nothing), they will appear nowhere in the dircmp output.
+    Because this was felt to be misleading, in the isdc_dircmp_dircmp.pl
+    they appear as "same" files.
+ 2. A common subdirectory is identified as "same" by dircmp, but "common" by 
+    isdc_dircmp_dircmp.pl.  This was decided because it appears misleading to
+    identify as "same" when the contents may be different.
+
+
+   
+=head1 OPTIONS
+
+--help  Print this info
+
+--h
+
+-h
+
+=head1 RETURN VALUE
+
+0 - no different nor unique files found (or successful completion of -h)
+
+1 - different or unique files found
+
+2 - user error (eg. dir does not exist)
+
+3 - coding anomaly detected (please notify the author)
+    - unexpected "unix cmp" error
+    - encountered file not of type "file" or "dir"
+    - encountered file present more than 1 time in each dir
+
+
+=head1 EXAMPLES
+
+1. To get help:
+dircmp.pl --help
+
+2. To compare two directories just below the current one:
+dircmp.pl  d1 d2
+
+=head1 ENVIRONMENT
+
+This tool assumes installation in the directory pointed to by environment variable $DIRCMP_INSTALL_DIR.
+
+=head1 BUGS
+
+None known at this time.
+
+=head1 SEE ALSO
+
+dircmp, diff
+
+=head1 AUTHOR
+
+Mark Gaber mark.gaber@obs.unige.ch
+
+
+=head1 HISTORY
+
+09 Apr 2002  Mark Gaber
+- initial creation
+
+aa
