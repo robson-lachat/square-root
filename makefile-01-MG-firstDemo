@@ -9,11 +9,14 @@ OUTREF_DATE = outref_${DATE}
 # Default target when you run 'make' without arguments
 help:
 	@echo "Available commands:"
-	@echo "  make install  - Installs dependencies via Poetry"
-	@echo "  make test     - Runs pytest with coverage for src"
-	@echo "  make lint     - Runs Ruff to check style and errors"
-	@echo "  make format   - Automatically formats code with Ruff"
-	@echo "  make check    - Runs format, lint, and test in sequence"
+	@echo "  make install  - Installs dependencies via Poetry."
+	@echo "  make test     - Runs pytest with coverage for src."
+	@echo "  make lint     - Runs Ruff to check style and errors."
+	@echo "  make format   - Automatically formats code with Ruff."
+	@echo "  make check    - Runs format, lint, and test in sequence."
+	@echo "  make out      - Executes the Python script math_logic.py and redirects the output to res01."
+	@echo "  make diff     - Compares the out directory with outref using a Perl script (dircmp.pl) and then performs a recursive diff."
+	@echo "  make outref   - Creates a dated backup of the out directory in unit_test/outref_[DATA] and updates the outref symbolic link to point to this new directory."
 
 install:
 	poetry install
